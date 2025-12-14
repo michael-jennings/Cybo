@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cybo: Phase Sync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0c0f1a;
+        --panel: #12182a;
+        --accent: #7ef9ff;
+        --accent-2: #ff6bd6;
+        --accent-3: #ffe66d;
+        --danger: #ff5c8d;
+        --success: #7dff7a;
+        --text: #e6edff;
+        --muted: #99a3c2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 20%, rgba(126, 249, 255, 0.08), transparent 30%),
+          radial-gradient(circle at 80% 10%, rgba(255, 107, 214, 0.1), transparent 35%),
+          radial-gradient(circle at 50% 80%, rgba(255, 230, 109, 0.08), transparent 40%),
+          var(--bg);
+        color: var(--text);
+        font-family: "Space Grotesk", "Press Start 2P", system-ui, -apple-system, sans-serif;
+        padding: 24px;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .logo-mark {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #0c0f1a;
+        box-shadow: 0 0 20px rgba(255, 107, 214, 0.35), 0 0 40px rgba(126, 249, 255, 0.2);
+      }
+
+      .subtitle {
+        color: var(--muted);
+        margin-top: 4px;
+        font-size: 14px;
+      }
+
+      .panel {
+        background: rgba(18, 24, 42, 0.9);
+        border: 1px solid rgba(126, 249, 255, 0.2);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+
+      .well-card {
+        position: relative;
+        padding: 12px;
+        min-height: 160px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, rgba(30, 38, 64, 0.8), rgba(24, 32, 54, 0.9));
+        border: 1px solid rgba(126, 249, 255, 0.25);
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+      }
+
+      .well-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      .well-card.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(126, 249, 255, 0.4), 0 0 18px rgba(126, 249, 255, 0.24);
+      }
+
+      .well-card .halo {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 35%, rgba(126, 249, 255, 0.13), transparent 45%);
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+
+      .well-id {
+        font-family: "Press Start 2P", monospace;
+        font-size: 14px;
+        color: var(--accent-3);
+        letter-spacing: 0.08em;
+      }
+
+      .well-energy {
+        margin-top: 12px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .well-energy span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(126, 249, 255, 0.85), rgba(255, 107, 214, 0.9));
+        width: 0;
+        transition: width 260ms ease;
+      }
+
+      .well-body {
+        margin-top: 16px;
+        color: var(--muted);
+        line-height: 1.45;
+        font-size: 13px;
+      }
+
+      .well-collapse {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--text);
+        opacity: 0.88;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .controls {
+        display: grid;
+        gap: 12px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge {
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(30, 38, 64, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+      }
+
+      .badge strong {
+        color: var(--text);
+      }
+
+      .btn {
+        padding: 14px 16px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+        color: #0c0f1a;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        text-transform: uppercase;
+        box-shadow: 0 8px 20px rgba(126, 249, 255, 0.2);
+        transition: transform 120ms ease, box-shadow 120ms ease;
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+      }
+
+      .btn.secondary {
+        background: rgba(30, 38, 64, 0.9);
+        color: var(--text);
+        border: 1px solid rgba(126, 249, 255, 0.3);
+        box-shadow: none;
+      }
+
+      .focus-meter {
+        height: 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .focus-meter span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-3), var(--accent-2));
+        width: 0;
+        transition: width 140ms ease;
+      }
+
+      .status {
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(30, 38, 64, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        line-height: 1.5;
+      }
+
+      .status.success {
+        border-color: rgba(125, 255, 122, 0.35);
+        box-shadow: 0 0 18px rgba(125, 255, 122, 0.15);
+      }
+
+      .status.fail {
+        border-color: rgba(255, 92, 141, 0.35);
+        box-shadow: 0 0 18px rgba(255, 92, 141, 0.12);
+      }
+
+      .log {
+        display: grid;
+        gap: 8px;
+        max-height: 420px;
+        overflow: auto;
+      }
+
+      .log-card {
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(18, 24, 42, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 14px;
+      }
+
+      .log-card strong {
+        color: var(--text);
+      }
+
+      .ghosts {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .ghost {
+        padding: 4px 8px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .mini-title {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .floating-cta {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .sound-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+      const { useEffect, useRef, useState } = React;
+
+      const secureRoll = (max) => {
+        const arr = new Uint32Array(1);
+        window.crypto.getRandomValues(arr);
+        return arr[0] % max;
+      };
+
+      const rollDie = (sides = 12) => secureRoll(sides) + 1;
+
+      const randomEnergy = () => 45 + secureRoll(55);
+
+      const synth = (() => {
+        let ctx;
+        const ensure = () => {
+          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+          return ctx;
+        };
+        const play = (freq, duration = 0.12, type = "square") => {
+          const context = ensure();
+          const osc = context.createOscillator();
+          const gain = context.createGain();
+          osc.type = type;
+          osc.frequency.value = freq;
+          gain.gain.value = 0.12;
+          osc.connect(gain);
+          gain.connect(context.destination);
+          osc.start();
+          osc.stop(context.currentTime + duration);
+        };
+        return { play };
+      })();
+
+      function useFocusMeter() {
+        const [focus, setFocus] = useState(35);
+        const intervalRef = useRef(null);
+
+        const start = () => {
+          if (intervalRef.current) return;
+          intervalRef.current = setInterval(() => {
+            setFocus((v) => Math.min(100, v + 1.6));
+          }, 70);
+        };
+
+        const stop = () => {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+        };
+
+        useEffect(() => {
+          const decay = setInterval(() => {
+            setFocus((v) => Math.max(8, v - 0.6));
+          }, 140);
+          return () => {
+            clearInterval(decay);
+            stop();
+          };
+        }, []);
+
+        return { focus, start, stop };
+      }
+
+      const WellCard = ({ well, selected, onSelect, lastCollapse }) => {
+        const reveal = lastCollapse?.target === well.id;
+        const success = reveal && lastCollapse?.result === well.id;
+        return (
+          <article
+            className={`well-card ${selected ? "selected" : ""}`}
+            onClick={() => onSelect(well.id)}
+            role="button"
+            aria-pressed={selected}
+            aria-label={`Probability well ${well.id}`}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") onSelect(well.id);
+            }}
+          >
+            <div className="halo" aria-hidden />
+            <div className="well-id">Well {well.id}</div>
+            <div className="well-energy">
+              <span style={{ width: `${well.energy}%` }} />
+            </div>
+            <div className="well-body">
+              Probability ripples hum in this sector. Tap to align your intent with this branch.
+            </div>
+            <div className="well-collapse">
+              {reveal ? (
+                <strong style={{ color: success ? "var(--success)" : "var(--danger)" }}>
+                  Collapsed ➜ {lastCollapse.result}
+                </strong>
+              ) : (
+                <span style={{ color: "var(--muted)" }}>Outcome hidden until collapse.</span>
+              )}
+            </div>
+          </article>
+        );
+      };
+
+      const StatusPanel = ({ status }) => {
+        if (!status) return null;
+        const tone = status.success ? "success" : "fail";
+        return (
+          <div className={`status ${tone}`}>
+            <div style={{ fontWeight: 700 }}>
+              {status.success ? "Reality Sync!" : "Branch Diverged"}
+            </div>
+            <div style={{ marginTop: 6 }}>{status.message}</div>
+            <div className="ghosts">
+              <span>Other glimpsed futures:</span>
+              {status.alternates.map((num, idx) => (
+                <span key={`${num}-${idx}`} className="ghost">{num}</span>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const LogCard = ({ entry }) => (
+        <div className="log-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <strong>{entry.success ? "Sync aligned" : "Off-branch"}</strong>
+            <span style={{ color: "var(--muted)", fontSize: 12 }}>
+              {new Date(entry.timestamp).toLocaleTimeString()}
+            </span>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            Targeted <strong>Well {entry.target}</strong> → Collapsed as <strong>{entry.result}</strong>
+          </div>
+          <div style={{ marginTop: 4, color: "var(--muted)" }}>
+            Focus resonance: {Math.round(entry.focus)}%
+          </div>
+          <div className="ghosts">
+            {entry.alternates.map((n, i) => (
+              <span className="ghost" key={`${n}-${i}`}>ghost {n}</span>
+            ))}
+          </div>
+        </div>
+      );
+
+      const Controls = ({
+        selected,
+        onCollapse,
+        onReset,
+        focus,
+        onFocusStart,
+        onFocusStop,
+        streak,
+        highScore,
+        soundEnabled,
+        toggleSound,
+      }) => (
+        <div className="controls">
+          <div className="badge-row">
+            <div className="badge">
+              <span>Current Intent</span>
+              <strong>{selected ? `Well ${selected}` : "Pick a well"}</strong>
+            </div>
+            <div className="badge">
+              <span>Sync Streak</span>
+              <strong>{streak}</strong>
+            </div>
+            <div className="badge">
+              <span>Best</span>
+              <strong>{highScore}</strong>
+            </div>
+          </div>
+
+          <div>
+            <div className="mini-title">Resonance</div>
+            <div className="focus-meter" aria-label="focus meter">
+              <span style={{ width: `${focus}%` }} />
+            </div>
+            <p style={{ color: "var(--muted)", marginTop: 6 }}>
+              Hold the focus button to steady your intent. Your mindset doesn’t rig the RNG—it sharpens your roleplay of steering the branch.
+            </p>
+          </div>
+
+          <div className="floating-cta">
+            <button
+              className="btn"
+              onMouseDown={onFocusStart}
+              onMouseUp={onFocusStop}
+              onMouseLeave={onFocusStop}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                onFocusStart();
+              }}
+              onTouchEnd={onFocusStop}
+            >
+              Breathe &amp; Steady
+            </button>
+            <button className="btn secondary" onClick={onCollapse}>
+              Collapse Reality
+            </button>
+            <button className="btn secondary" onClick={onReset}>
+              Shuffle Ripples
+            </button>
+            <button className="sound-toggle" onClick={toggleSound}>
+              <input type="checkbox" checked={soundEnabled} readOnly /> Sound
+            </button>
+          </div>
+        </div>
+      );
+
+      const App = () => {
+        const [wells, setWells] = useState(() =>
+          Array.from({ length: 12 }, (_, idx) => ({ id: idx + 1, energy: randomEnergy() }))
+        );
+        const [selected, setSelected] = useState(null);
+        const [status, setStatus] = useState(null);
+        const [log, setLog] = useState([]);
+        const [streak, setStreak] = useState(0);
+        const [highScore, setHighScore] = useState(0);
+        const [soundEnabled, setSoundEnabled] = useState(false);
+        const lastCollapse = status?.collapse;
+
+        const { focus, start, stop } = useFocusMeter();
+
+        const collapse = () => {
+          if (!selected) {
+            setStatus({ success: false, message: "Select a probability well first.", alternates: [], collapse: null });
+            return;
+          }
+          const result = rollDie(12);
+          const alternates = [rollDie(12), rollDie(12), rollDie(12)];
+          const success = result === selected;
+          const message = success
+            ? `Reality echoes answered. You pulled timeline ${result} into view.`
+            : `Branch drifted to ${result}. Keep practicing your intent.`;
+
+          if (soundEnabled) {
+            synth.play(success ? 880 : 160, success ? 0.2 : 0.25, success ? "sawtooth" : "square");
+          }
+
+          setStatus({ success, message, alternates, collapse: { target: selected, result } });
+          setLog((prev) => [
+            { target: selected, result, success, alternates, timestamp: Date.now(), focus },
+            ...prev,
+          ].slice(0, 15));
+          setWells((prev) => prev.map((w) => ({ ...w, energy: randomEnergy() })));
+          setStreak((s) => {
+            const next = success ? s + 1 : 0;
+            setHighScore((h) => Math.max(h, next));
+            return next;
+          });
+        };
+
+        const resetRipples = () => {
+          setWells((prev) => prev.map((w) => ({ ...w, energy: randomEnergy() })));
+          setStatus(null);
+          setSelected(null);
+        };
+
+        const toggleSound = () => setSoundEnabled((v) => !v);
+
+        return (
+          <div>
+            <header>
+              <div className="logo">
+                <div className="logo-mark">⚡</div>
+                <div>
+                  <div style={{ fontFamily: "Press Start 2P", fontSize: 14 }}>Cybo</div>
+                  <div className="subtitle">Phase Sync | Space Cadet Synchronicity Drill</div>
+                </div>
+              </div>
+              <div className="badge-row" aria-label="game stats">
+                <div className="badge"><span>Reality Branches</span><strong>12 wells</strong></div>
+                <div className="badge"><span>RNG</span><strong>crypto.getRandomValues</strong></div>
+                <div className="badge"><span>Vibe</span><strong>Commander Keen-ish</strong></div>
+              </div>
+            </header>
+
+            <main className="layout">
+              <section className="panel">
+                <div className="mini-title">Probability Wells</div>
+                <p style={{ color: "var(--muted)", marginTop: 6 }}>
+                  Pick a well, settle your intent, and collapse the multiverse. Outcomes are hidden until collapse—your focus shapes the vibe, but the reveal uses secure randomness.
+                </p>
+                <div className="grid" aria-live="polite">
+                  {wells.map((well) => (
+                    <WellCard
+                      key={well.id}
+                      well={well}
+                      selected={selected === well.id}
+                      onSelect={setSelected}
+                      lastCollapse={lastCollapse}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel">
+                <div className="mini-title">Control Deck</div>
+                <Controls
+                  selected={selected}
+                  onCollapse={collapse}
+                  onReset={resetRipples}
+                  focus={focus}
+                  onFocusStart={start}
+                  onFocusStop={stop}
+                  streak={streak}
+                  highScore={highScore}
+                  soundEnabled={soundEnabled}
+                  toggleSound={toggleSound}
+                />
+                <div className="mini-title" style={{ marginTop: 10 }}>
+                  Recent Collapses
+                </div>
+                <div className="log" aria-live="polite">
+                  {log.length === 0 && (
+                    <div style={{ color: "var(--muted)", fontSize: 14 }}>No collapses yet—pick a well and fire.</div>
+                  )}
+                  {log.map((entry, idx) => (
+                    <LogCard key={`${entry.timestamp}-${idx}`} entry={entry} />
+                  ))}
+                </div>
+              </section>
+            </main>
+
+            <StatusPanel status={status} />
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
